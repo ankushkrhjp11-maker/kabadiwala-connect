@@ -1,0 +1,24 @@
+{
+  "name": "kabadiwala-connect",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=20.9.0",
+    "pnpm": ">=11.0.0"
+  },
+  "scripts": {
+    "dev:api": "pnpm --filter @kabadiwala/api dev",
+    "dev:collector": "pnpm --filter @kabadiwala/collector-mobile start",
+    "dev:recycler": "pnpm --filter @kabadiwala/recycler-portal dev",
+    "dev:admin": "pnpm --filter @kabadiwala/admin-portal dev",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "build": "pnpm -r --if-present run build",
+    "lint": "pnpm -r --if-present run lint",
+    "format:check": "pnpm -r --if-present run format:check"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.0",
+    "typescript": "^5.9.3"
+  }
+}

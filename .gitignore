@@ -1,0 +1,46 @@
+# Dependencies and package-manager files
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+.expo/
+web-build/
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs and coverage
+*.log
+coverage/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Expo native output
+android/
+ios/
+
+# Generated Prisma client
+services/api/src/generated/
+
+archive.zip
+curl
+part[0])
+setActive(item)}
+span{color
+span{width
+strong{font-size
+type
+window.location.reload()}
+{
+
+archive.zip

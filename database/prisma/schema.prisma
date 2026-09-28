@@ -1,0 +1,341 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../services/api/src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model collectorProfile {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  userId              String   @unique(map: "CollectorProfile_userId_key") @db.Char(36)
+  address             String?  @db.VarChar(500)
+  locationDescription String?  @db.VarChar(255)
+  latitude            Decimal? @db.Decimal(10, 7)
+  longitude           Decimal? @db.Decimal(10, 7)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user     user      @relation(fields: [userId], references: [id], onDelete: Cascade, map: "CollectorProfile_userId_fkey")
+  lots     lot[]
+  payments payment[]
+
+  @@map("collectorprofile")
+}
+
+model lot {
+  id                   String    @id @default(uuid()) @db.Char(36)
+  referenceId          String    @unique(map: "Lot_referenceId_key") @db.VarChar(40)
+  collectorId          String    @db.Char(36)
+  materialCategoryId   String    @db.Char(36)
+  description          String?   @db.Text
+  imageReference       String?   @db.VarChar(500)
+  approximateWeight    Decimal?  @db.Decimal(12, 3)
+  estimatedValueLow    Decimal?  @db.Decimal(12, 2)
+  estimatedValueHigh   Decimal?  @db.Decimal(12, 2)
+  valuationConfidence  Int?
+  verificationRequired Boolean   @default(false)
+  collectionTimestamp  DateTime
+  latitude             Decimal?  @db.Decimal(10, 7)
+  longitude            Decimal?  @db.Decimal(10, 7)
+  status               lotStatus @default(DRAFT)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  collector          collectorProfile    @relation(fields: [collectorId], references: [id], map: "Lot_collectorId_fkey")
+  materialCategory   materialCategory    @relation(fields: [materialCategoryId], references: [id], map: "Lot_materialCategoryId_fkey")
+  payments           payment[]
+  recyclerOffers     recyclerOffer[]
+  traceabilityEvents traceabilityEvent[]
+  passport           ewastePassport?
+
+  @@index([collectorId, status], map: "Lot_collectorId_status_idx")
+  @@index([materialCategoryId, status], map: "Lot_materialCategoryId_status_idx")
+  @@index([status, collectionTimestamp], map: "Lot_status_collectionTimestamp_idx")
+  @@map("lot")
+}
+
+model ewastePassport {
+  id           String   @id @default(uuid()) @db.Char(36)
+  passportCode String   @unique(map: "EWastePassport_passportCode_key") @db.VarChar(60)
+  lotId        String   @unique(map: "EWastePassport_lotId_key") @db.Char(36)
+  publicToken  String   @unique(map: "EWastePassport_publicToken_key") @db.VarChar(100)
+  isPublic     Boolean  @default(true)
+  currentStage String   @db.VarChar(80)
+  finalOutcome String?  @db.VarChar(120)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lot lot @relation(fields: [lotId], references: [id], onDelete: Cascade, map: "EWastePassport_lotId_fkey")
+
+  @@index([currentStage], map: "EWastePassport_currentStage_idx")
+  @@map("ewastepassport")
+}
+
+model materialCategory {
+  id          String   @id @default(uuid()) @db.Char(36)
+  name        String   @db.VarChar(120)
+  slug        String   @unique(map: "MaterialCategory_slug_key") @db.VarChar(120)
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lots            lot[]
+  priceBoards     priceBoard[]
+  safetyGuidances safetyGuidance[]
+
+  @@index([isActive], map: "MaterialCategory_isActive_idx")
+  @@map("materialcategory")
+}
+
+model payment {
+  id                   String        @id @default(uuid()) @db.Char(36)
+  lotId                String        @db.Char(36)
+  collectorId          String        @db.Char(36)
+  recyclerId           String        @db.Char(36)
+  amount               Decimal       @db.Decimal(12, 2)
+  method               paymentMethod
+  status               paymentStatus @default(PENDING)
+  transactionReference String?       @unique(map: "Payment_transactionReference_key") @db.VarChar(120)
+  paidAt               DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  collectorProfile collectorProfile @relation(fields: [collectorId], references: [id], map: "Payment_collectorId_fkey")
+  lot              lot              @relation(fields: [lotId], references: [id], map: "Payment_lotId_fkey")
+  recycler         recycler         @relation(fields: [recyclerId], references: [id], map: "Payment_recyclerId_fkey")
+
+  @@index([collectorId, createdAt], map: "Payment_collectorId_createdAt_idx")
+  @@index([lotId, status], map: "Payment_lotId_status_idx")
+  @@index([recyclerId, createdAt], map: "Payment_recyclerId_createdAt_idx")
+  @@map("payment")
+}
+
+model priceBoard {
+  id                 String         @id @default(uuid()) @db.Char(36)
+  materialCategoryId String         @db.Char(36)
+  location           String         @db.VarChar(160)
+  buyingPrice        Decimal        @db.Decimal(12, 2)
+  unit               priceBoardUnit
+  marketMin          Decimal        @db.Decimal(12, 2)
+  marketMax          Decimal        @db.Decimal(12, 2)
+  offeredPrice       Decimal?       @db.Decimal(12, 2)
+  effectiveDate      DateTime       @db.Date
+  source             String?        @db.VarChar(255)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  materialCategory materialCategory @relation(fields: [materialCategoryId], references: [id], map: "PriceBoard_materialCategoryId_fkey")
+
+  @@index([location, effectiveDate], map: "PriceBoard_location_effectiveDate_idx")
+  @@index([materialCategoryId, location, effectiveDate], map: "PriceBoard_materialCategoryId_location_effectiveDate_idx")
+  @@map("priceboard")
+}
+
+model recycler {
+  id                  String                      @id @default(uuid()) @db.Char(36)
+  userId              String                      @unique(map: "Recycler_userId_key") @db.Char(36)
+  businessName        String                      @db.VarChar(160)
+  facilityAddress     String                      @db.VarChar(500)
+  latitude            Decimal?                    @db.Decimal(10, 7)
+  longitude           Decimal?                    @db.Decimal(10, 7)
+  authorizationNumber String?                     @unique(map: "Recycler_authorizationNumber_key") @db.VarChar(120)
+  authorizationStatus recyclerAuthorizationStatus @default(PENDING)
+  acceptedMaterials   Json
+  serviceArea         Json
+  pickupAvailable     Boolean                     @default(false)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+
+  payments       payment[]
+  user           user            @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Recycler_userId_fkey")
+  recyclerOffers recyclerOffer[]
+
+  @@index([authorizationStatus, pickupAvailable], map: "Recycler_authorizationStatus_pickupAvailable_idx")
+  @@map("recycler")
+}
+
+model recyclerOffer {
+  id              String              @id @default(uuid()) @db.Char(36)
+  lotId           String              @db.Char(36)
+  recyclerId      String              @db.Char(36)
+  offeredPrice    Decimal             @db.Decimal(12, 2)
+  pickupAvailable Boolean             @default(false)
+  message         String?             @db.VarChar(500)
+  status          recyclerOfferStatus @default(PENDING)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  lot      lot      @relation(fields: [lotId], references: [id], onDelete: Cascade, map: "RecyclerOffer_lotId_fkey")
+  recycler recycler @relation(fields: [recyclerId], references: [id], onDelete: Cascade, map: "RecyclerOffer_recyclerId_fkey")
+
+  @@index([lotId, status], map: "RecyclerOffer_lotId_status_idx")
+  @@index([recyclerId, status], map: "RecyclerOffer_recyclerId_status_idx")
+  @@map("recycleroffer")
+}
+
+model safetyGuidance {
+  id                 String                 @id @default(uuid()) @db.Char(36)
+  materialCategoryId String                 @db.Char(36)
+  title              String                 @db.VarChar(180)
+  description        String                 @db.Text
+  audioReference     String?                @db.VarChar(500)
+  iconReference      String?                @db.VarChar(500)
+  language           safetyGuidanceLanguage
+  isActive           Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  materialCategory materialCategory @relation(fields: [materialCategoryId], references: [id], map: "SafetyGuidance_materialCategoryId_fkey")
+
+  @@index([materialCategoryId, language, isActive], map: "SafetyGuidance_materialCategoryId_language_isActive_idx")
+  @@map("safetyguidance")
+}
+
+model traceabilityEvent {
+  id             String                @id @default(uuid()) @db.Char(36)
+  lotId          String                @db.Char(36)
+  eventType      traceabilityEventType
+  actorUserId    String                @db.Char(36)
+  timestamp      DateTime              @default(now())
+  latitude       Decimal?              @db.Decimal(10, 7)
+  longitude      Decimal?              @db.Decimal(10, 7)
+  photoReference String?               @db.VarChar(500)
+  metadata       Json?
+  createdAt      DateTime              @default(now())
+
+  user user @relation(fields: [actorUserId], references: [id], map: "TraceabilityEvent_actorUserId_fkey")
+  lot  lot  @relation(fields: [lotId], references: [id], map: "TraceabilityEvent_lotId_fkey")
+
+  @@index([actorUserId, timestamp], map: "TraceabilityEvent_actorUserId_timestamp_idx")
+  @@index([lotId, timestamp], map: "TraceabilityEvent_lotId_timestamp_idx")
+  @@map("traceabilityevent")
+}
+
+model user {
+  id                    String                @id @default(uuid()) @db.Char(36)
+  phone                 String                @unique(map: "User_phone_key") @db.VarChar(20)
+  name                  String?               @db.VarChar(120)
+  role                  UserRole
+  preferredLanguage     userPreferredLanguage @default(EN)
+  isActive              Boolean               @default(true)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  businessRole          userBusinessRole?
+  dateOfBirth           DateTime?             @db.Date
+  email                 String?               @unique(map: "User_email_key") @db.VarChar(180)
+  profileImageReference String?               @db.VarChar(500)
+  passwordHash          String?               @db.VarChar(255)
+
+  collectorProfile   collectorProfile?
+  recycler           recycler?
+  traceabilityEvents traceabilityEvent[]
+
+  @@index([businessRole], map: "User_businessRole_idx")
+  @@index([role, isActive], map: "User_role_isActive_idx")
+  @@map("user")
+}
+
+enum traceabilityEventType {
+  LOT_CREATED
+  QR_GENERATED
+  OFFER_ACCEPTED
+  PICKUP_BOOKED
+  HANDOVER_CONFIRMED
+  RECEIVED_BY_RECYCLER
+  STATUS_UPDATED
+
+  @@map("traceabilityevent_eventType")
+}
+
+enum UserRole {
+  COLLECTOR
+  RECYCLER
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum priceBoardUnit {
+  KG
+  UNIT
+  LOT
+
+  @@map("priceboard_unit")
+}
+
+enum userPreferredLanguage {
+  EN
+  HI
+  MR
+
+  @@map("user_preferredLanguage")
+}
+
+enum paymentMethod {
+  CASH
+  UPI
+
+  @@map("payment_method")
+}
+
+enum paymentStatus {
+  PENDING
+  RECORDED
+  CONFIRMED
+  FAILED
+  REVERSED
+
+  @@map("payment_status")
+}
+
+enum recyclerOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+
+  @@map("recycleroffer_status")
+}
+
+enum safetyGuidanceLanguage {
+  EN
+  HI
+  MR
+
+  @@map("safetyguidance_language")
+}
+
+enum recyclerAuthorizationStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+  REJECTED
+
+  @@map("recycler_authorizationStatus")
+}
+
+enum userBusinessRole {
+  RECYCLER
+  TRADER
+  MANUFACTURER
+
+  @@map("user_businessRole")
+}
+
+enum lotStatus {
+  DRAFT
+  AVAILABLE
+  OFFER_ACCEPTED
+  PICKUP_SCHEDULED
+  HANDED_OVER
+  RECEIVED_BY_RECYCLER
+  CLOSED
+  CANCELLED
+
+  @@map("lot_status")
+}

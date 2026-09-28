@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Kabadiwala Connect",
+    "slug": "kabadiwala-connect-collector",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "kabadiwala",
+    "android": {
+      "package": "com.kabadiwalaconnect.collector",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B6B57"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.kabadiwalaconnect.collector"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-secure-store"
+    ]
+  }
+}

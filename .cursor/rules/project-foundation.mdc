@@ -1,0 +1,11 @@
+---
+description: Kabadiwala Connect MVP guardrails
+globs:
+  - "**/*"
+---
+
+- Keep the backend a NestJS modular monolith.
+- Do not add AI, microservices, Redis, queues, object storage, or dashboards unless the active phase explicitly requires them.
+- Keep collector workflows low-literacy, multilingual (English/Hindi/Marathi), and offline-first.
+- Image-only analysis may report only visible condition. Never infer hidden internal hardware faults from a photograph.
+- Treat payment and QR custody records as auditable, append-only business events.
